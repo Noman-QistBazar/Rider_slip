@@ -1,17 +1,17 @@
 import gspread
 import pandas as pd
-from oauth2client.service_account import ServiceAccountCredentials
 from gspread_dataframe import set_with_dataframe
+from google.oauth2 import service_account
+import streamlit as st
 from modules.utils import DATA_FILE
 
-def get_gsheet_client():
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds = ServiceAccountCredentials.from_json_keyfile_name("credentials/google-credentials.json", scope)
-    return gspread.authorize(creds)
-
 def save_to_google_sheets():
-    client = get_gsheet_client()
-    spreadsheet = client.open("Rider Slip Data")  # Your actual Google Sheet name
+    credentials = service_account.Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+    )
+    client = gspread.authorize(credentials)
+    spreadsheet = client.open("Rider Slip Data")  # make sure this name matches your sheet
 
     all_data = pd.read_excel(DATA_FILE, sheet_name=None)
     for sheet_name, df in all_data.items():
@@ -20,5 +20,4 @@ def save_to_google_sheets():
             worksheet.clear()
         except gspread.exceptions.WorksheetNotFound:
             worksheet = spreadsheet.add_worksheet(title=sheet_name, rows="100", cols="20")
-        
         set_with_dataframe(worksheet, df)
